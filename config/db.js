@@ -1,38 +1,35 @@
-// config/db.js (الإصدار الصحيح باستخدام Promises)
+const mysql = require('mysql2/promise');
+const dotenv = require('dotenv');
 
-// استيراد واجهة Promises من mysql2
-const mysql = require('mysql2/promise'); 
+// تحميل الإعدادات من ملف .env (للتطوير المحلي)
+dotenv.config();
 
-// البيانات الخاصة بك:
 const DB_CONFIG = {
-    host: 'localhost',
-    user: 'admin',
-    password: 'Admin@123#',
-    database: 'flutter_app',
-    waitForConnections: true, // مهم جداً
-    connectionLimit: 10,      // يُفضل استخدام Pool في بيئات الإنتاج
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    port: process.env.DB_PORT || 25432, // المنفذ الخاص بـ Aiven
+    waitForConnections: true,
+    connectionLimit: 10,
     queueLimit: 0,
-    connectTimeout: 10000
+    connectTimeout: 10000,
+    // هذا السطر ضروري جداً للاتصال بـ Aiven السحابي
+    ssl: {
+        rejectUnauthorized: false
+    }
 };
 
-// =========================================================
-// *التحسين*: استخدام Pool بدلاً من Connection مفرد
-// =========================================================
-// Pool هو الأفضل للخادم لأنه يدير اتصالات متعددة
 const pool = mysql.createPool(DB_CONFIG);
 
-// يمكن إضافة اختبار اتصال لمرة واحدة
+// اختبار الاتصال
 pool.getConnection()
     .then(connection => {
-        console.log('Connect to DB success using Pool.');
-        connection.release(); // إعادة الاتصال إلى الـ Pool
+        console.log('✅ Connected to Aiven MySQL Database successfully!');
+        connection.release();
     })
     .catch(err => {
-        console.error('Error connecting to database Pool:', err);
+        console.error('❌ Database connection failed:', err.message);
     });
 
-
-// تصدير الـ Pool (الذي يدعم .execute)
-module.exports = pool; 
-
-// ملاحظة: إذا كنت تصر على استخدام createConnection، يجب استبدالها بـ createPool كما هو موضح أعلاه للحصول على أفضل أداء.
+module.exports = pool;
